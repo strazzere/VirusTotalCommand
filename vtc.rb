@@ -5,10 +5,9 @@ require 'json'
 require 'digest/md5'
 require 'digest/sha1'
 
-VER = "1.0"
+VER = "1.1"
 
 LATEST = "http://www.virustotal.com/latest-report.html?resource="
-WORKLOAD = "http://www.virustotal.com/get_workload.json?_="
 UPDATES = "http://www.virustotal.com/get_updates.json?_="
 AGENT = 'Mac Safari'
 
@@ -64,17 +63,6 @@ def get_updates (time=nil)
   end
 end
 
-def get_workload (time=nil)
-  mech = Mechanize.new
-  mech.user_agent_alias = AGENT
-  if(time.nil?)
-    time = Time.now.to_i.to_s
-  end
-  mech.get WORKLOAD + time do |workload|
-    return JSON.parse(workload.content)
-  end
-end
-
 def display_updates
   info "Querying for updates..."
   status = get_updates nil
@@ -98,29 +86,6 @@ def display_updates
   end
 end
 
-def display_workload
-  info "Querying for workload..."
-  status = get_workload nil
-  if(!status.nil?)
-    if(!status['url'].nil?)
-      if(status['url'] == "1")
-        url_str = "URL workload appears fine."
-      else
-        url_str = "Unknown URL workload found!"
-      end
-      verbose url_str + " URL Load: [ " + status['url'].to_s + " ]"
-    end
-    if(!status['file'].nil?)
-      if(status['file'] == 1)
-        file_str = "File workload appears fine."
-      else
-        file_str = "Unknown file workload found!"
-      end
-      verbose file_str + " File Load: [ " + status['file'].to_s + " ]"
-    end
-  end
-end
-
 if $stdin.tty?
   info "VTCommand v" + VERSION + " - Tim Strazzere (strazz@gmail.com)"
   if(ARGV.length == 0)
@@ -131,7 +96,6 @@ if $stdin.tty?
       latest_for_hash "5192ad05597e7a148f642be43f6441f6"
       md5_digest = Digest::MD5.hexdigest(File.read(file))
       sha_digest = Digest::SHA1.hexdigest(File.read(file))
-      display_workload
       display_updates
     rescue Errno::ENOENT
       error "\'" + file + "\' was not found!"
