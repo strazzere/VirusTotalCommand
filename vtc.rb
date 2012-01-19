@@ -50,25 +50,37 @@ def get_information (hash=nil, time=nil)
   end
 
   mech = Mechanize.new
-  file = []
+  file = {}
   mech.get(LATEST + hash + LATEST_MID + Time.now.to_i.to_s + '/') do |search|
-    file<< {
-      :file_names => search.content.scan(FILE_NAMES)[0][0]
-    }
-    file<< {
-      :first_seen_utc => search.content.scan(FIRST_SEEN)[0][0],
-      :first_seen_human => search.content.scan(FIRST_SEEN)[0][1]
-    }
-    file<< {
-      :last_seen_utc => search.content.scan(LAST_SEEN)[0][1],
-      :last_seen_human => search.content.scan(LAST_SEEN)[0][1]
-    }
-    file<< {
-      :detection_ratio => search.content.scan(DETECTION_RATIO)[0][0]
-    }
+    file[:file_names] = search.content.scan(FILE_NAMES)[0][0]
+    file[:first_seen_utc] = search.content.scan(FIRST_SEEN)[0][0]
+    file[:first_seen_human] = search.content.scan(FIRST_SEEN)[0][1]
+    file[:last_seen_utc] = search.content.scan(LAST_SEEN)[0][0]
+    file[:last_seen_human] = search.content.scan(LAST_SEEN)[0][1]
+    file[:detection_ratio] = search.content.scan(DETECTION_RATIO)[0][0]
   end
 
   return file
+end
+
+def pretty_print(information=nil)
+  if(information.nil?)
+    raise RuntimeError.new 'Unable to print nil information!'
+  end
+
+  info 'Data retrieved from VT:'
+
+  verbose 'File names:'
+  information[:file_names].each do |name|
+    verbose '  ' + name
+  end
+
+  verbose 'First seen:'
+  verbose '  ' + information[:first_seen_utc] + ' - ' + information[:first_seen_human]
+  verbose 'Last seen:'
+  verbose '  ' + information[:last_seen_utc] + ' - ' + information[:last_seen_human]
+
+
 end
 
 if $stdin.tty?
@@ -83,8 +95,8 @@ if $stdin.tty?
       sha_digest = Digest::SHA2.hexdigest(File.read(file))
       verbose "MD5:\t[ " + md5_digest.to_s + " ]"
       verbose "SHA256:\t[ " + sha_digest.to_s + " ]"
-      info = get_information sha_digest.to_s
-      puts info
+
+      pretty_print(get_information(sha_digest.to_s))
     rescue Errno::ENOENT
       error "\'" + file + "\' was not found!"
     end
