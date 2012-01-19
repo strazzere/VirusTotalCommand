@@ -23,6 +23,7 @@ def help
   verbose " -h/--hash HASH\t\t: Search for a single hash on virustotal.com (md5, sha1, sha256)"
   verbose " -f/--file FILE\t\t: Check a specific file for results on virustotal.com"
   verbose " -t/--time-stamp TIME\t: A specific time (epoc-based) to get results for"
+  verbose " -p/--proxy PROXY:PORT\t: A specific proxy and port address to use "
   verbose " -?/-help\t\t: this help"
 end
 
@@ -44,7 +45,7 @@ def verbose (string=nil)
   end
 end
 
-def get_information (hash=nil, time=nil)
+def get_information (hash=nil, time=nil, proxy=nil)
   if(hash.nil?)
     raise RuntimeError.new 'The hash (sha256) of the sample is required to get information about it!'
   end
@@ -57,6 +58,12 @@ def get_information (hash=nil, time=nil)
   end
 
   mech = Mechanize.new
+
+  if(proxy)
+    verbose 'Using proided proxy of [ ' + proxy[0] + ':' + proxy[1] + ' ]'
+    mech.set_proxy(proxy[0], proxy[1])
+  end
+
   file = {}
   mech.get(LATEST + hash + LATEST_MID + Time.now.to_i.to_s + '/') do |search|
     file[:file_names] = search.content.scan(FILE_NAMES)[0][0]
@@ -75,7 +82,7 @@ def pretty_print(information=nil)
     raise RuntimeError.new 'Unable to print nil information!'
   end
 
-  info 'Data retrieved from VT:'
+  info 'Data retrieved from VirusTotal:'
 
   verbose 'File names:'
   information[:file_names].each do |name|
@@ -105,6 +112,8 @@ if $stdin.tty?
       next_arg = :file
     when '-t', '--time-stamp'
       next_arg = :time_stamp
+    when '-p', '--proxy'
+      next_arg = :proxy_address
     when '-?', '--help'
       ARGS[:help] = true
       # Exit out
@@ -118,27 +127,37 @@ if $stdin.tty?
   if(ARGS.length == 0 || ARGS[:help])
     help
   else
+
+    if(ARGS[:proxy_address])
+      proxy = ARGS[:proxy_address].split(':')
+    end
+
     information = nil
     ARGS.each do |option, value|
       case option
       when :hash
         verbose 'Processing hash [ ' + value.to_s + ' ]'
-        information = get_information(value.to_s, ARGS[:time_stamp])
+        information = get_information(value.to_s, ARGS[:time_stamp], proxy)
       when :file
         begin
           verbose 'Processing file [ ' + value.to_s + ' ]'
           sha_digest = Digest::SHA2.hexdigest(File.read(value))
           verbose "SHA256:\t[ " + sha_digest.to_s + " ]"
 
-          information = get_information(sha_digest.to_s, ARGS[:time_stamp])
+          information = get_information(sha_digest.to_s, ARGS[:time_stamp], proxy)
+        rescue Net::HTTP::Persistent::Error
+          error 'Either VirusTotal is down - or a bad proxy was used!'
         rescue Errno::ENOENT
-          error "\'" + file + "\' was not found!"
+          error "\'" + value + "\' was not found!"
         end
       else
         next
         # Unknown option parsed
       end
-      pretty_print information
+
+      if(information)
+        pretty_print information
+      end
   end
   end
 end
