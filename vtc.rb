@@ -15,7 +15,7 @@ AGENT           = 'Mac Safari'
 FILE_NAMES      = /<h5>File names <small>\(max. 25\)<\/small><\/h5>[<ol>\n|\s]+<li>[\n|\s]+([^\n]+)[\n|\s]+<\/li>/
 FIRST_SEEN      = /<td>[\n|\s]+<h5>First seen by VirusTotal<\/h5>[\n|\s]+([\d\-\s\:]+UTC)\s\(\s([\d]+\s[\w\s]+)/
 LAST_SEEN       = /<td>\n\s{15}<h5>Last seen by VirusTotal<\/h5>\n\s{15}([\d\-\s\:]+UTC)\s\(\s([\d]+\s[\w\s]+)/
-DETECTION_RATIO = /<td>Detection ratio:<\/td>[\n|\s]+<[\w\s=\"\-]+>(\d\d\s\/\s\d\d)<\/td>/
+DETECTION_RATIO = /<td>Detection ratio:<\/td>[\n|\s]+<[\w\s=\"\-]+>(\d\d)\s\/\s(\d\d)<\/td>/
 
 def help
   info 'Usage: ' + APP_NAME + ' <options>'
@@ -64,7 +64,7 @@ def get_information (hash=nil, time=nil)
     file[:first_seen_human] = search.content.scan(FIRST_SEEN)[0][1]
     file[:last_seen_utc] = search.content.scan(LAST_SEEN)[0][0]
     file[:last_seen_human] = search.content.scan(LAST_SEEN)[0][1]
-    file[:detection_ratio] = search.content.scan(DETECTION_RATIO)[0][0]
+    file[:detection_ratio] = search.content.scan(DETECTION_RATIO)[0]
   end
 
   return file
@@ -86,6 +86,10 @@ def pretty_print(information=nil)
   verbose '  ' + information[:first_seen_utc] + ' - ' + information[:first_seen_human]
   verbose 'Last seen:'
   verbose '  ' + information[:last_seen_utc] + ' - ' + information[:last_seen_human]
+
+  percentage = (information[:detection_ratio][0].to_f / information[:detection_ratio][1].to_f * 100).to_i.to_s
+  verbose 'Detection Percentage:'
+  verbose '  ' + percentage + '% (' + information[:detection_ratio][0] + '/' + information[:detection_ratio][1] + ')'
 end
 
 if $stdin.tty?
