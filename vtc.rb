@@ -67,13 +67,33 @@ def get_information (hash=nil, time=nil, proxy=nil)
 
   file = {}
   mech.get(LATEST + hash + LATEST_MID + Time.now.to_i.to_s + '/') do |search|
-    file[:file_names] = search.content.scan(FILE_NAMES)[0][0]
-    file[:first_seen_utc] = search.content.scan(FIRST_SEEN)[0][0]
-    file[:first_seen_human] = search.content.scan(FIRST_SEEN)[0][1]
-    file[:last_seen_utc] = search.content.scan(LAST_SEEN)[0][0]
-    file[:last_seen_human] = search.content.scan(LAST_SEEN)[0][1]
-    file[:detection_ratio] = search.content.scan(DETECTION_RATIO)[0]
-    file[:exif_metadata] = search.content.scan(EXIF_METADATA)[0][0]
+
+    file_names = search.content.scan(FILE_NAMES)
+    if(!file_names.nil? && !file_names[0].nil? && !file_names[0][0].nil?)
+      file[:file_names] = file_names[0][0]
+    end
+
+    first_seen_utc = search.content.scan(FIRST_SEEN)
+    if(!first_seen_utc.nil?&& !first_seen_utc[0].nil? && !first_seen_utc[0][0].nil? && !first_seen_utc[0][1].nil?)
+      file[:first_seen_utc] = first_seen_utc[0][0]
+      file[:first_seen_human] = first_seen_utc[0][1]
+    end
+
+    last_seen_utc = search.content.scan(LAST_SEEN)
+    if(!last_seen_utc.nil?&& !last_seen_utc[0].nil? && !last_seen_utc[0][0].nil? && !last_seen_utc[0][1].nil?)
+      file[:last_seen_utc] = last_seen_utc[0][0]
+      file[:last_seen_human] = last_seen_utc[0][1]
+    end
+
+    detection_ratio = search.content.scan(DETECTION_RATIO)
+    if(!detection_ratio.nil? && !detection_ratio[0].nil?)
+      file[:detection_ratio] = detection_ratio[0]
+    end
+
+    exif_metadata = search.content.scan(EXIF_METADATA)
+    if(!exif_metadata.nil? && !exif_metadata[0].nil? && !exif_metadata[0][0].nil?)
+      file[:exif_metadata] = exif_metadata[0][0]
+    end
   end
 
   return file
@@ -86,26 +106,36 @@ def pretty_print(information=nil)
 
   info 'Data retrieved from VirusTotal:'
 
-  file_names = "File names:\n"
-  information[:file_names].each do |name|
-    file_names += "\t" + name
+  information.each do |key, value|
+    buffer = ''
+    case key
+    when :file_names
+      buffer += "File names:\n"
+      value.each do |name|
+          buffer += "\t" + name
+      end
+    when :first_seen_utc
+      buffer = "First seen:\n" +
+        "\t" + value + " - " + information[:first_seen_human]
+    when :last_seen_utc
+      buffer = "Last seen:\n" +
+        "\t" + value + " - " + information[:last_seen_human]
+    when :first_seen_human, :last_seen_human
+    when :detection_ratio
+      percentage = (information[:detection_ratio][0].to_f / information[:detection_ratio][1].to_f * 100).to_i.to_s
+      buffer = "Detection Percentage:\n" +
+        "\t" + percentage + "% (" + information[:detection_ratio][0] + "/" + information[:detection_ratio][1] + ")"
+    when :exif_metadata
+      exif_metadata = "Exif Metadata:\n"
+      value.split("\n").each do |metadata|
+        exif_metadata += "\t" + metadata + "\n"
+      end
+      buffer = exif_metadata
+    else
+      error 'Hit an unknown option to print : ' + key.to_s
+    end
+    verbose buffer if buffer != ''
   end
-  verbose file_names
-
-  verbose "First seen:\n" +
-    "\t" + information[:first_seen_utc] + " - " + information[:first_seen_human]
-  verbose "Last seen:\n" +
-    "\t" + information[:last_seen_utc] + " - " + information[:last_seen_human]
-
-  percentage = (information[:detection_ratio][0].to_f / information[:detection_ratio][1].to_f * 100).to_i.to_s
-  verbose "Detection Percentage:\n" +
-    "\t" + percentage + "% (" + information[:detection_ratio][0] + "/" + information[:detection_ratio][1] + ")"
-
-  exif_metadata = "Exif Metadata:\n"
-  information[:exif_metadata].split("\n").each do |metadata|
-    exif_metadata += "\t" + metadata + "\n"
-  end
-  verbose exif_metadata
 end
 
 if $stdin.tty?
