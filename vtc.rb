@@ -15,6 +15,7 @@ AGENT           = 'Mac Safari'
 FILE_NAMES      = /<h5>File names <small>\(max. 25\)<\/small><\/h5>[<ol>\n|\s]+<li>[\n|\s]+([^\n]+)[\n|\s]+<\/li>/
 FIRST_SEEN      = /<td>[\n|\s]+<h5>First seen by VirusTotal<\/h5>[\n|\s]+([\d\-\s\:]+UTC)\s\(\s([\d]+\s[\w\s]+)/
 LAST_SEEN       = /<td>\n\s{15}<h5>Last seen by VirusTotal<\/h5>\n\s{15}([\d\-\s\:]+UTC)\s\(\s([\d]+\s[\w\s]+)/
+FILE_SIZE       = /<td>File size:<\/td>[\n|\s]+<td>([\w|\s\.\(\)]+)<\/td>/ 
 DETECTION_RATIO = /<td>Detection ratio:<\/td>[\n|\s]+<[\w\s=\"\-]+>(\d\d)\s\/\s(\d\d)<\/td>/
 EXIF_METADATA   = /<h5>ExifTool file metadata<\/h5>\s+<pre.*>([.\S\s]+)<\/pre>/
 
@@ -74,15 +75,20 @@ def get_information (hash=nil, time=nil, proxy=nil)
     end
 
     first_seen_utc = search.content.scan(FIRST_SEEN)
-    if(!first_seen_utc.nil?&& !first_seen_utc[0].nil? && !first_seen_utc[0][0].nil? && !first_seen_utc[0][1].nil?)
+    if(!first_seen_utc.nil? && !first_seen_utc[0].nil? && !first_seen_utc[0][0].nil? && !first_seen_utc[0][1].nil?)
       file[:first_seen_utc] = first_seen_utc[0][0]
       file[:first_seen_human] = first_seen_utc[0][1]
     end
 
     last_seen_utc = search.content.scan(LAST_SEEN)
-    if(!last_seen_utc.nil?&& !last_seen_utc[0].nil? && !last_seen_utc[0][0].nil? && !last_seen_utc[0][1].nil?)
+    if(!last_seen_utc.nil? && !last_seen_utc[0].nil? && !last_seen_utc[0][0].nil? && !last_seen_utc[0][1].nil?)
       file[:last_seen_utc] = last_seen_utc[0][0]
       file[:last_seen_human] = last_seen_utc[0][1]
+    end
+
+    file_size = search.content.scan(FILE_SIZE)
+    if(!file_size.nil? && !file_size[0].nil? && !file_size[0][0].nil?)
+      file[:file_size] = file_size[0][0]
     end
 
     detection_ratio = search.content.scan(DETECTION_RATIO)
@@ -121,6 +127,8 @@ def pretty_print(information=nil)
       buffer = "Last seen:\n" +
         "\t" + value + " - " + information[:last_seen_human]
     when :first_seen_human, :last_seen_human
+    when :file_size
+      buffer = "File size:\n" + "\t" + value.to_s
     when :detection_ratio
       percentage = (information[:detection_ratio][0].to_f / information[:detection_ratio][1].to_f * 100).to_i.to_s
       buffer = "Detection Percentage:\n" +
