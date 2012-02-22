@@ -19,6 +19,7 @@ FILE_SIZE       = /<td>File size:<\/td>[\n|\s]+<td>([\w|\s\.\(\)]+)<\/td>/
 FILE_TYPE       = /<td>File type:<\/td>[\n|\s]+<td>([\w|\s]+)<\/td>/
 DETECTION_RATIO = /<td>Detection ratio:<\/td>[\n|\s]+<[\w\s=\"\-]+>(\d\d)\s\/\s(\d\d)<\/td>/
 EXIF_METADATA   = /<h5>ExifTool file metadata<\/h5>\s+<pre.*>([.\S\s]+)<\/pre>/
+SSDEEP          = /<h5>ssdeep<\/h5>[\n|\s]+([\w|0-9\:]+)/
 
 def help
   info 'Usage: ' + APP_NAME + ' <options>'
@@ -106,6 +107,11 @@ def get_information (hash=nil, time=nil, proxy=nil)
     if(!exif_metadata.nil? && !exif_metadata[0].nil? && !exif_metadata[0][0].nil?)
       file[:exif_metadata] = exif_metadata[0][0]
     end
+
+    ssdeep = search.content.scan(SSDEEP)
+    if(!ssdeep.nil? && !ssdeep[0].nil? && !ssdeep[0][0].nil?)
+      file[:ssdeep] = ssdeep[0][0]
+    end
   end
 
   return file
@@ -147,6 +153,8 @@ def pretty_print(information=nil)
         exif_metadata += "\t" + metadata + "\n"
       end
       buffer = exif_metadata
+    when :ssdeep
+      buffer = "SSDEEP:\n" + "\t" + value
     else
       error 'Hit an unknown option to print : ' + key.to_s
     end
