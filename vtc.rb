@@ -16,6 +16,7 @@ FILE_NAMES      = /<h5>File names <small>\(max. 25\)<\/small><\/h5>[<ol>\n|\s]+<
 FIRST_SEEN      = /<td>[\n|\s]+<h5>First seen by VirusTotal<\/h5>[\n|\s]+([\d\-\s\:]+UTC)\s\(\s([\d]+\s[\w\s]+)/
 LAST_SEEN       = /<td>\n\s{15}<h5>Last seen by VirusTotal<\/h5>\n\s{15}([\d\-\s\:]+UTC)\s\(\s([\d]+\s[\w\s]+)/
 FILE_SIZE       = /<td>File size:<\/td>[\n|\s]+<td>([\w|\s\.\(\)]+)<\/td>/ 
+FILE_TYPE       = /<td>File type:<\/td>[\n|\s]+<td>([\w|\s]+)<\/td>/
 DETECTION_RATIO = /<td>Detection ratio:<\/td>[\n|\s]+<[\w\s=\"\-]+>(\d\d)\s\/\s(\d\d)<\/td>/
 EXIF_METADATA   = /<h5>ExifTool file metadata<\/h5>\s+<pre.*>([.\S\s]+)<\/pre>/
 
@@ -91,6 +92,11 @@ def get_information (hash=nil, time=nil, proxy=nil)
       file[:file_size] = file_size[0][0]
     end
 
+    file_type = search.content.scan(FILE_TYPE)
+    if(!file_type.nil? && !file_type[0].nil? && !file_type[0][0].nil?)
+      file[:file_type] = file_type[0][0]
+    end
+
     detection_ratio = search.content.scan(DETECTION_RATIO)
     if(!detection_ratio.nil? && !detection_ratio[0].nil?)
       file[:detection_ratio] = detection_ratio[0]
@@ -129,6 +135,8 @@ def pretty_print(information=nil)
     when :first_seen_human, :last_seen_human
     when :file_size
       buffer = "File size:\n" + "\t" + value.to_s
+    when :file_type
+      buffer = "File type:\n" + "\t" + value.to_s
     when :detection_ratio
       percentage = (information[:detection_ratio][0].to_f / information[:detection_ratio][1].to_f * 100).to_i.to_s
       buffer = "Detection Percentage:\n" +
